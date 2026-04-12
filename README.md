@@ -5,6 +5,14 @@ AI-powered predictive forecasting for financial time-series data. Upload any CSV
 Live demo: https://foresight-mspf.onrender.com
 
 ---
+<img width="1600" height="803" alt="image" src="https://github.com/user-attachments/assets/df1bbba7-c628-4075-ab6c-f0f352fa7b6a" />
+<img width="1600" height="802" alt="image" src="https://github.com/user-attachments/assets/9995d926-5572-4d69-9a3c-c83422870377" />
+<img width="1600" height="798" alt="image" src="https://github.com/user-attachments/assets/73476154-7a48-4a7d-b6e0-97b95d145ea9" />
+<img width="1600" height="798" alt="image" src="https://github.com/user-attachments/assets/03cfebda-0b5d-43b6-a39d-34dbb41e04f6" />
+<img width="1600" height="802" alt="image" src="https://github.com/user-attachments/assets/9b1eb47f-1f3d-44fd-b3a3-016a41f91885" />
+
+
+
 
 ## Overview
 
