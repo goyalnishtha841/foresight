@@ -15,9 +15,30 @@ import {
 } from '../utils/api.js'
 
 const DEMO_DATASETS = [
-  { label: 'US retail sales',        file: '/data/example_retail_sales.csv',         dateCol: 'ds',    valueCol: 'y' },
-  { label: 'UK mortgage approvals',  file: '/data/uk_mortgage_approvals_monthly.csv', dateCol: 'month', valueCol: 'mortgage_approvals_thousands' },
-  { label: 'UK house prices',        file: '/data/uk_house_prices.csv',               dateCol: 'month', valueCol: 'avg_house_price_gbp_thousands' },
+  {
+    label:    'UK house prices',
+    file:     '/data/uk_house_prices.csv',
+    dateCol:  'month',
+    valueCol: 'avg_house_price_gbp_thousands',
+  },
+  {
+    label:    'UK mortgage approvals',
+    file:     '/data/uk_mortgage_approvals_monthly.csv',
+    dateCol:  'month',
+    valueCol: 'mortgage_approvals_thousands',
+  },
+  {
+    label:    'UK digital banking adoption',
+    file:     '/data/uk_digital_banking_users.csv',
+    dateCol:  'month',
+    valueCol: 'digital_banking_users_k',
+  },
+  {
+    label:    'UK banking multi-column dataset',
+    file:     '/data/uk_banking_multicolumn.csv',
+    dateCol:  'date',
+    valueCol: ['mortgage_approvals_thousands','avg_house_price_gbp_thousands','consumer_credit_gbp_bn','effective_mortgage_rate_pct'],
+  },
 ]
 
 export function useAnalysis() {
@@ -71,29 +92,58 @@ export function useAnalysis() {
 
   // ── Load demo dataset by fetching from /data/ ─────────────────────────
 
+  // const handleLoadDemo = useCallback(async (demoIdx) => {
+  //   const demo = DEMO_DATASETS[demoIdx]
+  //   setLoading(true)
+  //   setLoadingMsg('Loading demo dataset…')
+  //   setError(null)
+  //   try {
+  //     const resp = await fetch(demo.file)
+  //     const text = await resp.text()
+  //     const blob = new Blob([text], { type: 'text/csv' })
+  //     const file = new File([blob], `${demo.label}.csv`, { type: 'text/csv' })
+  //     const info = await uploadFile(file)
+  //     setUploadInfo(info)
+  //     setDateCol(demo.dateCol)
+  //     setValueCol(demo.valueCol)
+  //     setDatasetLabel(demo.label)
+  //     setStep('configure')
+  //   } catch (e) {
+  //     setError('Could not load demo dataset.')
+  //   } finally {
+  //     setLoading(false)
+  //   }
+  // }, [])
   const handleLoadDemo = useCallback(async (demoIdx) => {
-    const demo = DEMO_DATASETS[demoIdx]
-    setLoading(true)
-    setLoadingMsg('Loading demo dataset…')
-    setError(null)
-    try {
-      const resp = await fetch(demo.file)
-      const text = await resp.text()
-      const blob = new Blob([text], { type: 'text/csv' })
-      const file = new File([blob], `${demo.label}.csv`, { type: 'text/csv' })
-      const info = await uploadFile(file)
-      setUploadInfo(info)
-      setDateCol(demo.dateCol)
-      setValueCol(demo.valueCol)
-      setDatasetLabel(demo.label)
-      setStep('configure')
-    } catch (e) {
-      setError('Could not load demo dataset.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const demo = DEMO_DATASETS[demoIdx]
+  setLoading(true)
+  setLoadingMsg('Loading demo dataset…')
+  setError(null)
+  try {
+    const resp = await fetch(demo.file)
+    const text = await resp.text()
+    const blob = new Blob([text], { type: 'text/csv' })
+    const file = new File([blob], `${demo.label}.csv`, { type: 'text/csv' })
+    const info = await uploadFile(file)
+    setUploadInfo(info)
+    setDateCol(demo.dateCol)
+    setValueCol(Array.isArray(demo.valueCol) ? demo.valueCol[0] : demo.valueCol)
 
+    // ✅ ADD THIS — populate valueCols for the switcher
+    setValueCols(
+      Array.isArray(demo.valueCol)
+        ? demo.valueCol          // multi-column demo
+        : info.value_cols || []  // single-column demo — use what backend detected
+    )
+
+    setDatasetLabel(demo.label)
+    setStep('configure')
+  } catch (e) {
+    setError('Could not load demo dataset.')
+  } finally {
+    setLoading(false)
+  }
+}, [])
   // ── Run analysis ──────────────────────────────────────────────────────
 
   const handleAnalyse = useCallback(async () => {
@@ -192,6 +242,7 @@ export function useAnalysis() {
     setAnswer(null)
     setQuestion('')
     setAnomalyExplanations({})
+    setValueCols([]) 
   }, [])
   
   const handleSwitchColumn = useCallback(async (newCol) => {

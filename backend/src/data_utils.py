@@ -15,21 +15,56 @@ import numpy as np
 from io import BytesIO
 
 
+# def parse_csv(file_bytes: bytes) -> pd.DataFrame:
+#     """
+#     Parse raw CSV bytes into a DataFrame.
+
+#     Args:
+#         file_bytes: Raw bytes from an uploaded CSV file.
+
+#     Returns:
+#         Parsed DataFrame with original column names preserved.
+
+#     Raises:
+#         ValueError: If the file cannot be parsed as CSV.
+#     """
+#     try:
+#         return pd.read_csv(BytesIO(file_bytes))
+#     except Exception as exc:
+#         raise ValueError(f"Could not parse file as CSV: {exc}") from exc
 def parse_csv(file_bytes: bytes) -> pd.DataFrame:
-    """
-    Parse raw CSV bytes into a DataFrame.
+    """Parse CSV bytes into a DataFrame, trying multiple separators."""
+    from io import BytesIO
+    import chardet
 
-    Args:
-        file_bytes: Raw bytes from an uploaded CSV file.
+    # Detect encoding
+    detected = chardet.detect(file_bytes)
+    encoding = detected.get('encoding') or 'utf-8'
 
-    Returns:
-        Parsed DataFrame with original column names preserved.
+    for sep in [',', ';', '\t', '|']:
+        try:
+            df = pd.read_csv(
+                BytesIO(file_bytes),
+                sep=sep,
+                encoding=encoding,
+                on_bad_lines='skip',   # skip malformed lines
+                engine='python',
+            )
+            # Must have at least 2 columns to be useful
+            if len(df.columns) >= 2:
+                return df
+        except Exception:
+            continue
 
-    Raises:
-        ValueError: If the file cannot be parsed as CSV.
-    """
+    # Last resort — try with error_bad_lines=False
     try:
-        return pd.read_csv(BytesIO(file_bytes))
+        df = pd.read_csv(
+            BytesIO(file_bytes),
+            encoding=encoding,
+            on_bad_lines='skip',
+            engine='python',
+        )
+        return df
     except Exception as exc:
         raise ValueError(f"Could not parse file as CSV: {exc}") from exc
 
