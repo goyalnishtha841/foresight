@@ -93,7 +93,7 @@ export default function Dashboard({
       </header>
 
       {/* Main content */}
-      <main id="dashboard-content" className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <main id="dashboard-content" className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {quality && <ScrollReveal><QualityBanner quality={quality} /></ScrollReveal>}
 
         {(key_findings || narration) && (
@@ -133,13 +133,14 @@ export default function Dashboard({
                 <ValidationPanel validation={validation} modelParams={forecast?.model_params} />
               </ScrollReveal>
             )}
-            {forecast?.decomposition && (
-              <ScrollReveal delay={0.2}>
-                <DecompositionPanel decomposition={forecast.decomposition} />
-              </ScrollReveal>
-            )}
           </div>
         </div>
+
+        {forecast?.decomposition && (
+          <ScrollReveal delay={0.22}>
+            <DecompositionPanel decomposition={forecast.decomposition} />
+          </ScrollReveal>
+        )}
 
         <ScrollReveal delay={0.25}>
           <AskPanel question={question} setQuestion={setQuestion} onAsk={onAsk} answer={answer} loading={loadingAnswer} />

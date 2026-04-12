@@ -1,40 +1,6 @@
 """
 narrator.py
 -----------
-All Claude API interactions for ForeSight.
-
-Design principle — Claude does narration only, never maths:
-The statistical engine (forecast.py, validation.py, anomaly.py) produces
-all numbers. Claude receives a small, structured JSON bundle of those
-numbers and converts them into plain English. This means:
-  1. Claude cannot hallucinate a wrong forecast value.
-  2. Prompts are tiny — fast and cheap on the free tier.
-  3. No customer data ever reaches the Claude API (privacy-safe).
-
-Model choice — claude-haiku-4-5:
-Haiku is the fastest and most cost-efficient Claude model. For our use
-case (structured input → short paragraph output) it performs identically
-to Sonnet at a fraction of the latency and cost.
-"""
-
-"""
-narrator.py
------------
-All AI narration for ForeSight using Google Gemini API (free tier).
-
-Why Gemini:
-- Generous free tier (15 RPM, 1M tokens/day)
-- Fast responses suitable for real-time dashboard use
-- Simple SDK, near-identical usage pattern to Anthropic
-
-Design principle unchanged — Gemini does narration only, never maths.
-All numbers come from the statistical engine. Gemini receives structured
-JSON and converts it to plain English. No raw CSV data is ever sent.
-"""
-
-"""
-narrator.py
------------
 All AI narration for ForeSight using Groq API (free tier).
 Model: llama-3.3-70b-versatile — fast, free, high quality.
 
