@@ -1,6 +1,6 @@
 # ForeSight
 
-AI-powered predictive forecasting for financial time-series data. Upload any CSV, get a statistically rigorous forecast, anomaly detection, trend decomposition, backtested accuracy scores, and plain-English AI commentary — in under ten seconds.
+AI-powered predictive forecasting for financial time-series data. Upload any CSV, get a statistically rigorous forecast, anomaly detection, trend decomposition, backtested accuracy scores, and plain-English AI commentary — in 5–15 seconds.
 
 Live demo: https://foresight-mspf.onrender.com
 
@@ -60,3 +60,330 @@ cp .env.example .env
 ```
 
 Open `.env` and add your Groq API key (free at console.groq.com):
+GROQ_API_KEY=your_groq_api_key_here
+
+Start the server:
+
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+Verify it is running:
+
+```bash
+curl http://localhost:8000/health
+# Expected: {"status":"ok","version":"1.0.0"}
+```
+
+**3. Frontend setup**
+
+Open a new terminal:
+
+```bash
+cd frontend
+npm install
+cp .env.example .env
+```
+
+The default `VITE_API_URL` in `.env` points to `http://localhost:8000`. Update it only if your backend runs on a different port.
+
+```bash
+npm run dev
+```
+
+Open http://localhost:5173 in your browser.
+
+**4. Run the test suite (optional)**
+
+```bash
+cd backend
+pytest tests/ -v
+```
+
+**5. Production build (optional)**
+
+```bash
+cd frontend
+npm run build
+npm run preview
+```
+
+---
+
+## Tech Stack
+
+**Frontend**
+
+| Library | Version | Purpose |
+|---------|---------|---------|
+| React | 18.3 | UI framework |
+| Vite | 5.3 | Build tool and dev server |
+| Tailwind CSS | 3.4 | Utility-first styling |
+| Framer Motion | 11.0 | Animations and transitions |
+| Recharts | 2.12 | Interactive charts |
+| Axios | 1.7 | HTTP client |
+| Lucide React | 0.383 | Icon set |
+
+**Backend**
+
+| Library | Version | Purpose |
+|---------|---------|---------|
+| FastAPI | 0.111 | REST API framework |
+| Uvicorn | 0.29 | ASGI server |
+| Pandas | 2.0+ | Data ingestion and manipulation |
+| NumPy | 1.26+ | Numerical operations |
+| statsmodels | 0.14 | ETS model, seasonal decomposition |
+| SciPy | 1.11+ | Statistical utilities |
+| Groq SDK | 0.9 | LLM narration (llama-3.3-70b-versatile) |
+| ReportLab | 4.1 | Server-side PDF generation |
+| chardet | 5.2+ | CSV encoding detection |
+| pytest | 8.2 | Unit test framework |
+
+**Infrastructure**
+
+| Service | Purpose |
+|---------|---------|
+| Render | Cloud hosting for both frontend and backend |
+| GitHub | Version control (private during hackathon) |
+
+**Runtime**
+
+Python 3.11 (pinned in runtime.txt for Render deployment).
+
+---
+
+## Usage Examples
+
+**Uploading your own data**
+
+Prepare a CSV with at least one date column and one numeric column:
+month,avg_house_price_gbp_thousands
+2018-01,225.4
+2018-02,226.1
+2018-03,229.8
+
+1. Open the app and click Upload CSV or drag the file onto the upload area.
+2. The backend auto-detects columns; confirm or override the selection.
+3. Set the forecast horizon (default 4 periods; max 30).
+4. Click Run Analysis. Results appear in 5–15 seconds depending on series length and cold-start state.
+
+**Switching between columns in a multi-column file**
+
+Upload a file with several numeric columns. After the first analysis completes, use the Metric dropdown in the top header to switch columns. The full pipeline re-runs on the new column without re-uploading.
+
+**Exploring anomalies**
+
+Click any row in the Anomaly Detection panel to expand a plain-English explanation of the likely cause. Anomalies are colour-coded: red for critical (|z| ≥ 3.0), amber for warning (|z| ≥ 2.5), blue for mild (|z| ≥ 2.0).
+
+**Custom scenario**
+
+In the Scenario Comparison panel, enter any growth percentage (between -100 and +500) and click Run to generate a custom forecast alongside the three pre-computed scenarios.
+
+**Asking a question**
+
+Type any plain-English question in the Ask a Question panel at the bottom of the dashboard. Examples:
+
+- "What is the strongest seasonal month in this dataset?"
+- "Is the confidence band wide enough to trust this forecast?"
+- "How many standard deviations was the largest anomaly?"
+
+**Exporting**
+
+Click Export in the top header to download a formatted PDF briefing containing the dataset summary, quality report, forecast narrative, and key findings. The PDF is generated server-side via ReportLab.
+
+---
+
+## Architecture
+
+------------
+
+
+Browser (React + Vite)
+  UploadPanel
+  ConfigurePanel
+  Dashboard
+    ForecastChart
+    AnomalyPanel
+    DecompositionPanel
+    ValidationPanel
+    ScenarioPanel
+    AskPanel
+    KeyFindings
+         |
+         | REST / JSON (Axios)
+         v
+FastAPI (Python 3.12)
+  POST /upload            parse_csv → detect_columns → store in _session
+  POST /analyse           prepare_series → quality_report → run_forecast
+                          → detect_anomalies → compute_anomaly_risk
+                          → run_validation → run_scenarios
+                          → narrate_forecast → narrate_key_findings
+  POST /anomaly/:id/explain   narrate_anomaly (Groq, on demand)
+  POST /scenario/custom   run_custom_scenario (multiplier on base forecast)
+  POST /ask               answer_question (Groq, grounded in session data)
+  POST /export/pdf        generate_briefing_pdf (ReportLab)
+  GET  /health            liveness check
+         |
+         | HTTPS (Groq SDK)
+         v
+Groq API — llama-3.3-70b-versatile
+
+All application state lives in a single custom hook, `useAnalysis.js`. Components are pure: they receive data and callbacks only, with no direct API calls. The backend uses an in-memory session dict (`_session`) to share the uploaded DataFrame and analysis results across the `/anomaly/explain`, `/ask`, and `/scenario/custom` endpoints — avoiding re-uploads on follow-up calls. A production version would replace this with Redis or a proper session store.
+
+**Analysis pipeline for a single /analyse call (in order):**
+
+1. `parse_csv` — tries comma, semicolon, tab, and pipe separators; detects encoding with chardet
+2. `detect_columns` — identifies the date column by attempting `pd.to_datetime` on each string column; returns all numeric columns as value candidates
+3. `prepare_series` — parses dates, normalises to date-only (strips time components), sorts chronologically, returns a time-indexed `pd.Series`
+4. `quality_report` — counts missing values, duplicate dates, and ±3σ outliers; fills gaps with linear interpolation; returns a clean series alongside the report
+5. `run_forecast` — detects seasonal period from the pandas frequency string (with length-heuristic fallback); fits up to three ETS variants and selects by AIC; bootstraps 500 residual paths for confidence bands; clips to ±5σ; runs additive decomposition
+6. `detect_anomalies` — computes rolling z-scores with an 8-period window; classifies by threshold into mild / warning / critical; sorts by severity then date
+7. `compute_anomaly_risk` — compares std of last 8 periods to prior 8 periods; outputs a volatility ratio and risk level
+8. `run_validation` — holds out the last N periods; refits ETS using the same AIC competition; compares against naive and moving-average baselines; computes MAPE, MAE, band coverage, and the Forecast Health Score
+9. `run_scenarios` — applies 1.0x, 1.1x, and 0.9x multipliers to the central forecast to produce Baseline, Optimistic, and Pessimistic projections
+10. `narrate_forecast`, `narrate_key_findings` — sends only the computed metrics (no raw data) to Groq; receives plain-English output
+
+---
+
+## Technical Depth
+
+**ETS model selection**
+
+Rather than fixing a single ETS specification, the backend runs an AIC competition across up to three variants for each dataset:
+
+- add/add (additive trend, additive seasonality) — always attempted
+- add/mul (additive trend, multiplicative seasonality) — attempted when all values are strictly positive
+- mul/mul (multiplicative trend and seasonality) — attempted when values are positive and the coefficient of variation exceeds 0.15
+
+The variant with the lowest Akaike Information Criterion is selected. This matters in practice: UK house price data (slow upward trend, mild seasonal cycle) typically favours add/add, while data with proportionally growing seasonal swings favours add/mul. Selecting automatically means the system works correctly on different datasets without manual tuning.
+
+**Bootstrap confidence bands**
+
+Standard ETS prediction intervals assume normally distributed errors. Financial time series rarely satisfy this. ForeSight instead resamples the fitted model's residuals with replacement 500 times per forecast horizon and takes the 10th and 90th percentiles as the band boundaries. This approach makes no distributional assumption and produces intervals that honestly reflect the actual residual spread of the specific dataset being analysed.
+
+**Rolling z-score anomaly detection**
+
+A global z-score would compare each value against the entire series mean and standard deviation. On a trending or growing series, this produces systematic false positives in the early periods (where values are legitimately lower than the long-run mean) and false negatives in the later periods. The rolling window (8 periods, min 3) adapts the reference distribution to the local context of each data point, which is more appropriate for financial data that changes regime over time.
+
+**Forecast Health Score**
+
+The 0–100 score combines three measurable components: model accuracy scored against a 20% MAPE ceiling (40 points — a MAPE of 0% scores full marks, 20% or above scores zero), confidence band calibration against the target 80% coverage rate (30 points, penalised for both over- and under-coverage), and data quality including series length and missing-value rate (30 points). The score gives a single interpretable signal about whether a given forecast should be trusted.
+
+**AI narration design**
+
+The LLM receives only the computed metrics — forecast values, band bounds, MAPE, health score, anomaly count — not the raw CSV data. This means the LLM cannot hallucinate incorrect numbers: all numerical claims in its output are grounded in values the statistical engine already calculated. It also keeps the privacy footprint minimal; no customer data is ever transmitted to a third-party API.
+
+---
+
+## Test Coverage
+
+Unit tests are in `backend/tests/` and can be run with `pytest tests/ -v`.
+
+Tests cover: `detect_seasonal_period` on short, medium, and long series; `run_forecast` output shape and confidence band ordering (low must never exceed high); `run_validation` output schema, error handling on short series, health score range (0–100), and valid winner values; `detect_anomalies` detecting a planted spike, valid severity levels, and valid direction values; `quality_report` on clean data, data with missing values, and short series; `detect_columns` correctly identifying a date column.
+
+---
+
+## Limitations
+
+- **Backend cold start** — hosted on Render's free tier; the first request after a period of inactivity may take 30–60 seconds while the container wakes up
+- **CSV only** — Excel and JSON ingestion are not currently supported; the file must be a well-formed CSV
+- **Single date column** — the system expects one date column; multi-indexed or irregular time series may need pre-processing before upload
+- **Stateless session** — the in-memory `_session` dict is not persistent across server restarts and does not support concurrent users sharing a single session
+- **Minimum data** — at least 12 observations are required for any forecast; 24 or more is recommended for reliable seasonal decomposition
+- **Forecast horizon** — the ETS model is optimised for short-to-medium horizons; very long-range projections should be treated as directional guidance only
+
+---
+
+## Future Improvements
+
+- User authentication and saved analyses — allow analysts to return to previous forecasts
+- Additional model types — ARIMA and Prophet as alternatives to ETS, with automatic selection by cross-validated MAPE
+- Excel and JSON ingestion — extend the parse_csv pipeline to handle other common formats
+- Concurrent session handling — replace the in-memory dict with Redis to support multiple simultaneous users
+- Live data connectors — scheduled re-forecasting from a connected spreadsheet, database, or API endpoint
+- Multi-variate modelling — forecast one column as a function of others, for example house prices as a function of mortgage rates
+
+---
+
+## Folder Structure
+foresight/
+  backend/
+    main.py               API entry point; all route definitions and session management
+    src/
+      data_utils.py       CSV parsing, column detection, series preparation, quality report
+      forecast.py         ETS model selection, bootstrap bands, seasonal decomposition
+      anomaly.py          Rolling z-score detection, forward-looking risk score
+      validation.py       Holdout backtesting, baseline comparison, Health Score
+      scenarios.py        Baseline / Optimistic / Pessimistic / custom scenario generation
+      narrator.py         Groq API integration; all LLM prompt construction and calls
+      pdf_export.py       ReportLab PDF briefing generation
+    tests/
+      test_forecast.py    Unit tests for forecast, validation, anomaly, and data utils
+      test_api.py         API endpoint integration tests
+    requirements.txt
+    runtime.txt           Python 3.12 (pinned for Render)
+    .env.example
+
+  frontend/
+    public/
+      data/               Pre-loaded UK banking demo CSVs
+    src/
+      components/         All UI panels (pure, data-driven; no direct API calls)
+        Dashboard.jsx
+        ForecastChart.jsx
+        AnomalyPanel.jsx
+        DecompositionPanel.jsx
+        ValidationPanel.jsx
+        ScenarioPanel.jsx
+        AskPanel.jsx
+        UploadPanel.jsx
+        ConfigurePanel.jsx
+        KeyFindings.jsx
+        QualityBanner.jsx
+        HealthDial.jsx
+        LoadingOverlay.jsx
+        ExportButton.jsx
+      hooks/
+        useAnalysis.js    Central state management; all API orchestration
+      utils/
+        api.js            Axios client; all backend calls in one place
+        formatters.js     Number, date, and label formatting utilities
+      App.jsx
+      main.jsx
+      index.css           Tailwind imports, CSS custom properties, keyframe animations
+    package.json
+    vite.config.js
+    tailwind.config.cjs
+    .env.example
+
+---
+
+## Environment Variables
+
+**backend/.env**
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| GROQ_API_KEY | Yes | API key from console.groq.com (free tier) |
+
+**frontend/.env**
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| VITE_API_URL | Yes | Backend base URL; defaults to http://localhost:8000 |
+
+Credentials are loaded at runtime via python-dotenv and Vite's `import.meta.env`. Neither `.env` file is committed to the repository. The `.env.example` files in both directories list all required variables without values.
+
+---
+
+## Open-Source Compliance
+
+Released under the Apache License 2.0.
+
+All commits are signed off per the Developer Certificate of Origin (DCO) using `git commit -s`. A single email address is used for all commits and hackathon communications throughout the event.
+
+All third-party dependencies use permissive licences: FastAPI, Uvicorn, Pydantic, and Starlette under MIT; Pandas, NumPy, and statsmodels under BSD-3; React, Vite, Tailwind CSS, and Framer Motion under MIT. No proprietary or confidential company information is used anywhere in the codebase.
+
+---
+
+Built for the NatWest Group — Code for Purpose India Hackathon.
