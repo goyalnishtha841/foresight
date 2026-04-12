@@ -7,9 +7,10 @@
  *   3. dashboard — full results view
  *
  * All state lives in the useAnalysis hook.
- * This component only routes between views.
+ * Theme (dark/light) is toggled here and applied to the root element.
  */
 
+import { useState, useEffect } from 'react'
 import UploadPanel    from './components/UploadPanel.jsx'
 import ConfigurePanel from './components/ConfigurePanel.jsx'
 import Dashboard      from './components/Dashboard.jsx'
@@ -18,13 +19,25 @@ import { useAnalysis } from './hooks/useAnalysis.js'
 
 export default function App() {
   const analysis = useAnalysis()
+  const [theme, setTheme] = useState('dark')
+
+  useEffect(() => {
+    const root = document.documentElement
+    if (theme === 'light') {
+      root.classList.add('light')
+    } else {
+      root.classList.remove('light')
+    }
+  }, [theme])
+
+  function toggleTheme() {
+    setTheme(t => t === 'dark' ? 'light' : 'dark')
+  }
 
   return (
     <>
-      {/* Global loading overlay — shown during API calls */}
       {analysis.loading && <LoadingOverlay message={analysis.loadingMsg} />}
 
-      {/* Step routing */}
       {analysis.step === 'upload' && (
         <UploadPanel
           onUpload={analysis.handleUpload}
@@ -32,6 +45,8 @@ export default function App() {
           loading={analysis.loading}
           error={analysis.error}
           demoDatasets={analysis.DEMO_DATASETS}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       )}
 
@@ -50,6 +65,8 @@ export default function App() {
           onBack={analysis.handleReset}
           loading={analysis.loading}
           error={analysis.error}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       )}
 
@@ -70,6 +87,8 @@ export default function App() {
           onReset={analysis.handleReset}
           valueCols={analysis.valueCols}
           onSwitchColumn={analysis.handleSwitchColumn}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       )}
     </>

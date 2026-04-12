@@ -1,45 +1,48 @@
-/**
- * QualityBanner.jsx
- * -----------------
- * Compact banner shown at the top of the dashboard showing the
- * data quality verdict and any issues found before forecasting.
- * Green = clean, amber = warnings present, red = poor quality.
- */
+import { motion } from 'framer-motion'
 
 export default function QualityBanner({ quality }) {
   if (!quality) return null
 
-  const colours = {
-    clean:   { bar: 'bg-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', dot: 'bg-emerald-500' },
-    warning: { bar: 'bg-amber-400',   bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-800',   dot: 'bg-amber-400' },
-    poor:    { bar: 'bg-red-400',      bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-800',     dot: 'bg-red-400' },
+  const styles = {
+    clean:   { bg: 'bg-success/[0.06]',     border: 'border-success/20',     text: 'text-success',     dot: 'bg-success' },
+    warning: { bg: 'bg-warning/[0.06]',     border: 'border-warning/20',     text: 'text-warning',     dot: 'bg-warning' },
+    poor:    { bg: 'bg-destructive/[0.06]', border: 'border-destructive/20', text: 'text-destructive', dot: 'bg-destructive' },
   }
-  const c = colours[quality.verdict] || colours.warning
+  const s = styles[quality.verdict] || styles.warning
 
   const summary = quality.verdict === 'clean'
     ? `${quality.n_rows} observations · ${quality.date_start} to ${quality.date_end} · No issues found`
     : `${quality.n_rows} observations · ${quality.date_start} to ${quality.date_end}`
 
   return (
-    <div className={`rounded-xl border px-4 py-3 ${c.bg} ${c.border}`}>
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`rounded-xl border px-4 py-3 ${s.bg} ${s.border}`}
+    >
       <div className="flex items-start gap-3">
-        <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${c.dot}`} />
+        <div className="relative flex-shrink-0 mt-1.5">
+          <div className={`w-2 h-2 rounded-full ${s.dot}`} />
+          {quality.verdict !== 'clean' && (
+            <div className={`absolute inset-0 rounded-full animate-ping opacity-50 ${s.dot}`} />
+          )}
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-xs font-semibold ${c.text}`}>
+            <span className={`text-xs font-semibold ${s.text}`}>
               Data quality: {quality.verdict === 'clean' ? 'Clean' : quality.verdict === 'warning' ? 'Warning' : 'Poor'}
             </span>
-            <span className={`text-xs ${c.text} opacity-70`}>{summary}</span>
+            <span className={`text-xs ${s.text} opacity-70`}>{summary}</span>
           </div>
           {quality.issues?.length > 0 && (
             <ul className="mt-1 space-y-0.5">
               {quality.issues.map((issue, i) => (
-                <li key={i} className={`text-xs ${c.text} opacity-80`}>· {issue}</li>
+                <li key={i} className={`text-xs ${s.text} opacity-75`}>· {issue}</li>
               ))}
             </ul>
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

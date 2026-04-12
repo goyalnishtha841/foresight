@@ -1,12 +1,6 @@
-/**
- * AskPanel.jsx
- * ------------
- * Free-text input that lets users ask plain-English questions
- * about their data. Claude answers from the forecast context —
- * not from generic knowledge — so answers are specific and grounded.
- */
-
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { MessageCircle, Send, Loader2, Sparkles } from 'lucide-react'
 
 const SUGGESTED_QUESTIONS = [
   'Why might the forecast be declining?',
@@ -17,100 +11,113 @@ const SUGGESTED_QUESTIONS = [
 
 export default function AskPanel({ question, setQuestion, onAsk, answer, loading }) {
   function handleKey(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      onAsk()
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onAsk() }
   }
 
   return (
-    <div className="card p-5 space-y-4">
-      <div>
-        <h3 className="font-semibold text-gray-900">Ask a question</h3>
-        <p className="text-xs text-gray-400 mt-0.5">
-          Ask anything about your data — answers are grounded in your forecast results
-        </p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="glass-card p-6 space-y-5"
+    >
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-accent/10 border border-accent/10">
+          <MessageCircle className="w-4 h-4 text-accent" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-foreground">Ask AI</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Answers are grounded in your forecast results</p>
+        </div>
       </div>
 
       {/* Input */}
-      <div className="flex gap-2">
+      <div className="relative">
         <input
           type="text"
           value={question}
           onChange={e => setQuestion(e.target.value)}
           onKeyDown={handleKey}
           placeholder="e.g. Why was week 45 so high?"
-          className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-nw-600 focus:border-transparent"
+          className="input-dark w-full pr-12"
           disabled={loading}
         />
-        <button
+        <motion.button
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
           onClick={onAsk}
           disabled={loading || !question.trim()}
-          className="btn-primary flex items-center gap-1.5"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-primary/90 hover:bg-primary text-white disabled:opacity-30 transition-all duration-200"
+          style={{ boxShadow: '0 0 0px transparent' }}
         >
-          {loading ? (
-            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10"
-                      stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-            </svg>
-          ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor"
-                 strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round"
-                    d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
-            </svg>
-          )}
-          Ask
-        </button>
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        </motion.button>
       </div>
 
       {/* Suggested questions */}
       {!answer && !loading && (
-        <div>
-          <p className="text-xs text-gray-400 mb-2">Suggested questions</p>
-          <div className="flex flex-wrap gap-2">
-            {SUGGESTED_QUESTIONS.map(q => (
-              <button
-                key={q}
-                onClick={() => { setQuestion(q); }}
-                className="text-xs bg-gray-50 border border-gray-200 hover:border-nw-300
-                           hover:bg-nw-50 text-gray-600 px-3 py-1.5 rounded-full
-                           transition-colors duration-150"
-              >
-                {q}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-2">
+          {SUGGESTED_QUESTIONS.map(q => (
+            <motion.button
+              key={q}
+              whileHover={{ scale: 1.03, y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setQuestion(q)}
+              className="px-3 py-1.5 rounded-full text-xs bg-secondary/20 border border-border/20 text-muted-foreground
+                         hover:text-foreground hover:border-border/40 hover:bg-secondary/40 transition-all duration-200"
+            >
+              <Sparkles className="w-3 h-3 inline mr-1.5 opacity-50" />
+              {q}
+            </motion.button>
+          ))}
         </div>
       )}
 
-      {/* Answer */}
-      {loading && (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <svg className="w-4 h-4 animate-spin text-nw-600" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10"
-                    stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-          </svg>
-          Thinking…
-        </div>
-      )}
-
-      {answer && !loading && (
-        <div className="bg-nw-50 border border-nw-100 rounded-xl p-4 animate-fade-in">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-5 h-5 rounded-full bg-nw-600 flex items-center justify-center">
-              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-              </svg>
+      {/* Response area */}
+      <AnimatePresence mode="wait">
+        {loading && (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="p-5 rounded-xl bg-secondary/15 border border-border/20 space-y-3"
+          >
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+              <span>Analysing your data…</span>
             </div>
-            <span className="text-xs font-semibold text-nw-700">ForeSight</span>
-          </div>
-          <p className="text-sm text-gray-700 leading-relaxed">{answer}</p>
-        </div>
-      )}
-    </div>
+            <div className="space-y-2">
+              {[1, 0.75, 0.5].map((w, i) => (
+                <motion.div key={i}
+                  animate={{ opacity: [0.3, 0.7, 0.3] }}
+                  transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }}
+                  className="h-3 bg-secondary/30 rounded-full"
+                  style={{ width: `${w * 100}%` }}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {!loading && answer && (
+          <motion.div
+            key="answer"
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="p-5 rounded-xl bg-secondary/15 border border-border/20 space-y-3"
+          >
+            <div className="flex gap-3">
+              <div className="mt-0.5 p-1 rounded-md bg-accent/10 h-fit flex-shrink-0">
+                <Sparkles className="w-3 h-3 text-accent" />
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">{answer}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   )
 }
