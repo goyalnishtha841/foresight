@@ -147,6 +147,7 @@ Maximum 80 words total."""
 def narrate_key_findings(forecast: dict,
                          anomalies: list,
                          validation: dict) -> list:
+    anomalies= anomalies or []
     """Generate 3 proactive key findings shown immediately after upload."""
     context = {
         "forecast_values": forecast["forecast"],

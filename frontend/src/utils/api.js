@@ -76,3 +76,13 @@ export async function checkHealth() {
   const { data } = await client.get('/health')
   return data
 }
+export async function exportPdf() {
+  const response = await fetch(`${BASE_URL}/export/pdf`, { method: 'POST' })
+  const blob = await response.blob()
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = 'ForeSight_Briefing.pdf'
+  a.click()
+  URL.revokeObjectURL(url)
+}

@@ -25,15 +25,10 @@ def detect_anomalies(series: pd.Series,
     """
     Identify anomalous data points using a rolling z-score.
 
-    For each point, compute how many standard deviations it sits
-    from the rolling mean of the surrounding window. Points beyond
-    the threshold are flagged with their date, value, direction,
-    and severity.
-
     Severity bands:
-    - mild:     2.0 ≤ |z| < 2.5
-    - warning:  2.5 ≤ |z| < 3.0
-    - critical: |z| ≥ 3.0
+    - mild:     2.0 <= |z| < 2.5
+    - warning:  2.5 <= |z| < 3.0
+    - critical: |z| >= 3.0
 
     Args:
         series:    Clean, time-indexed pd.Series.
@@ -41,11 +36,10 @@ def detect_anomalies(series: pd.Series,
         threshold: Minimum |z-score| to flag as anomaly (default 2.0).
 
     Returns:
-        List of dicts, each representing one anomaly, sorted by
-        severity (critical first) then date.
+        List of dicts sorted by severity then date. Always returns a list.
     """
     rolling_mean = series.rolling(window, min_periods=3).mean()
-    rolling_std = series.rolling(window, min_periods=3).std()
+    rolling_std  = series.rolling(window, min_periods=3).std()
 
     # Avoid division by zero on flat series segments
     rolling_std = rolling_std.replace(0, np.nan)
@@ -61,10 +55,10 @@ def detect_anomalies(series: pd.Series,
             continue
 
         anomalies.append({
-            "date": str(idx.date()),
-            "value": round(float(series[idx]), 2),
-            "z_score": round(float(z), 2),
-            "expected": round(float(rolling_mean[idx]), 2),
+            "date":      str(idx.date()),
+            "value":     round(float(series[idx]), 2),
+            "z_score":   round(float(z), 2),
+            "expected":  round(float(rolling_mean[idx]), 2),
             "direction": "spike" if z > 0 else "dip",
             "severity": (
                 "critical" if abs(z) >= 3.0
@@ -79,3 +73,60 @@ def detect_anomalies(series: pd.Series,
         key=lambda x: (severity_rank[x["severity"]], x["date"])
     )
     return anomalies
+
+
+def compute_anomaly_risk(series: pd.Series, window: int = 8) -> dict:
+    """
+    Compute forward-looking anomaly risk based on recent volatility trend.
+
+    Compares std of most recent window against prior window.
+    If volatility is increasing, anomaly risk is rising.
+
+    Returns:
+        dict with risk_level, risk_score, message, and supporting stats.
+    """
+    if len(series) < window * 2:
+        return {
+            "risk_level":       "unknown",
+            "risk_score":       50,
+            "message":          "Insufficient data to assess anomaly risk.",
+            "recent_std":       0,
+            "prior_std":        0,
+            "volatility_ratio": 1.0,
+        }
+
+    recent_std = float(series.iloc[-window:].std())
+    prior_std  = float(series.iloc[-window*2:-window].std())
+
+    if prior_std < 1e-10:
+        ratio = 1.0
+    else:
+        ratio = recent_std / prior_std
+
+    risk_score = min(100, int(50 * ratio))
+
+    if risk_score >= 85:
+        risk_level = "high"
+        message = (
+            f"Anomaly risk is HIGH — recent volatility is "
+            f"{ratio:.1f}x the prior period. "
+            f"Closely monitor the next few observations."
+        )
+    elif risk_score >= 65:
+        risk_level = "medium"
+        message = (
+            f"Anomaly risk is ELEVATED — volatility has increased "
+            f"compared to the prior period. Stay alert."
+        )
+    else:
+        risk_level = "low"
+        message = "Data is stable — anomaly risk is low based on recent volatility."
+
+    return {
+        "risk_level":       risk_level,
+        "risk_score":       risk_score,
+        "message":          message,
+        "recent_std":       round(recent_std, 4),
+        "prior_std":        round(prior_std, 4),
+        "volatility_ratio": round(ratio, 2),
+    }

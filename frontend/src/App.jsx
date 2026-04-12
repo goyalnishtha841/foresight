@@ -57,6 +57,7 @@ export default function App() {
         <Dashboard
           results={analysis.results}
           datasetLabel={analysis.datasetLabel}
+          valueCol={analysis.valueCol}
           anomalyExplanations={analysis.anomalyExplanations}
           loadingAnomalyIdx={analysis.loadingAnomalyIdx}
           onExplainAnomaly={analysis.handleExplainAnomaly}
@@ -67,6 +68,8 @@ export default function App() {
           answer={analysis.answer}
           loadingAnswer={analysis.loadingAnswer}
           onReset={analysis.handleReset}
+          valueCols={analysis.valueCols}
+          onSwitchColumn={analysis.handleSwitchColumn}
         />
       )}
     </>

@@ -13,6 +13,7 @@ import { fmtDate, fmtNumber, severityColour } from '../utils/formatters.js'
 
 export default function AnomalyPanel({
   anomalies,
+  anomalyRisk,
   explanations,
   loadingIdx,
   onExplain,
@@ -44,6 +45,45 @@ export default function AnomalyPanel({
           {anomalies.length === 0 ? 'Clean' : `${anomalies.length} found`}
         </span>
       </div>
+       {anomalyRisk && anomalyRisk.risk_level !== 'unknown' && (
+          <div className={`flex items-start gap-3 p-3 rounded-xl mb-4 border
+            ${anomalyRisk.risk_level === 'high'
+              ? 'bg-red-50 border-red-200'
+              : anomalyRisk.risk_level === 'medium'
+              ? 'bg-amber-50 border-amber-200'
+              : 'bg-emerald-50 border-emerald-200'}`}>
+            <div className="relative flex-shrink-0 mt-0.5">
+              <div className={`w-2.5 h-2.5 rounded-full
+                ${anomalyRisk.risk_level === 'high'   ? 'bg-red-500'
+                : anomalyRisk.risk_level === 'medium' ? 'bg-amber-500'
+                :                                        'bg-emerald-500'}`} />
+              {anomalyRisk.risk_level !== 'low' && (
+                <div className={`absolute inset-0 rounded-full animate-ping opacity-75
+                  ${anomalyRisk.risk_level === 'high' ? 'bg-red-400' : 'bg-amber-400'}`} />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-gray-700">
+                Forward-looking anomaly risk:&nbsp;
+                <span className={
+                  anomalyRisk.risk_level === 'high'   ? 'text-red-600'
+                  : anomalyRisk.risk_level === 'medium' ? 'text-amber-600'
+                  :                                        'text-emerald-600'
+                }>
+                  {anomalyRisk.risk_level.toUpperCase()}
+                </span>
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                {anomalyRisk.message}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Recent volatility: {anomalyRisk.recent_std}&nbsp;·&nbsp;
+                Prior volatility: {anomalyRisk.prior_std}&nbsp;·&nbsp;
+                Ratio: {anomalyRisk.volatility_ratio}x
+              </p>
+            </div>
+          </div>
+        )}
 
       {anomalies.length === 0 ? (
         <div className="flex items-center gap-3 py-4 text-emerald-700">

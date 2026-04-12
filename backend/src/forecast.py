@@ -224,13 +224,59 @@ def detect_seasonal_period(series: pd.Series) -> int:
     Returns:
         Integer seasonal period.
     """
+    """
+    Infer the correct seasonal period from the series date index.
+
+    Uses pandas frequency detection as primary method — accurate for
+    any regularly-spaced time series. Falls back to length heuristic
+    only when frequency cannot be determined.
+
+    Seasonal periods by frequency:
+    - Hourly:    24 (daily cycle)
+    - Daily:      7 (weekly cycle — weekday/weekend pattern)
+    - Weekly:    52 (annual cycle)
+    - Monthly:   12 (annual cycle)
+    - Quarterly:  4 (annual cycle)
+    - Annual:     1 (no seasonality)
+
+    Args:
+        series: Time-indexed pd.Series.
+
+    Returns:
+        Integer seasonal period.
+    """
+    try:
+        freq = pd.infer_freq(series.index)
+        if freq:
+            freq_upper = freq.upper()
+            # Hourly
+            if freq_upper.startswith('H') or freq_upper == 'T' or freq == 'h':
+                return 24
+            # Daily or Business daily
+            if freq_upper.startswith('D') or freq_upper.startswith('B'):
+                return 7
+            # Weekly
+            if freq_upper.startswith('W'):
+                return 52
+            # Monthly (MS, ME, M)
+            if freq_upper.startswith('M'):
+                return 12
+            # Quarterly (QS, Q)
+            if freq_upper.startswith('Q'):
+                return 4
+            # Annual (YS, Y, A, AS)
+            if freq_upper.startswith('Y') or freq_upper.startswith('A'):
+                return 1
+    except Exception:
+        pass
+
+    # Fallback — length heuristic when frequency cannot be inferred
+    # This handles irregular or unknown frequencies
     n = len(series)
-    if n >= 104:
-        return 52
-    if n >= 24:
-        return 12
-    if n >= 14:
-        return 7
+    if n >= 730:  return 7   # likely daily
+    if n >= 104:  return 52  # likely weekly
+    if n >= 24:   return 12  # likely monthly
+    if n >= 14:   return 7   # likely weekly
     return 4
 
 
@@ -258,36 +304,73 @@ def run_forecast(series: pd.Series, periods: int = 4) -> dict:
                         historical_dates, historical_values.
     """
     seasonal_period = detect_seasonal_period(series)
-
-    # Fit model with fallback
     converged = True
+    selected_type = "add/add"
+
+    can_use_multiplicative = float(series.min()) > 0
+    cv = float(series.std() / abs(series.mean())) if series.mean() != 0 else 0
+
+    candidates = []
+
+    # Always try additive
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            model = ExponentialSmoothing(
-                series,
-                trend="add",
-                seasonal="add",
+            m_add = ExponentialSmoothing(
+                series, trend="add", seasonal="add",
                 seasonal_periods=seasonal_period,
                 initialization_method="estimated",
             ).fit(optimized=True)
+        candidates.append(("add/add", m_add, m_add.aic))
     except Exception:
-        # Fallback to simple exponential smoothing
-        # when full ETS fails to converge on unusual data
-        model = ExponentialSmoothing(
-            series,
-            trend=None,
-            seasonal=None,
-            initialization_method="estimated",
-        ).fit(optimized=True)
-        converged = False
+        pass
 
-    # forecast_values is ALWAYS assigned here, outside try/except
-    # This means it is available regardless of which model path ran
+    # Try add/mul on positive data
+    if can_use_multiplicative:
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                m_addmul = ExponentialSmoothing(
+                    series, trend="add", seasonal="mul",
+                    seasonal_periods=seasonal_period,
+                    initialization_method="estimated",
+                ).fit(optimized=True)
+            candidates.append(("add/mul", m_addmul, m_addmul.aic))
+        except Exception:
+            pass
+
+    # Try mul/mul only on variable positive data
+    if can_use_multiplicative and cv > 0.15:
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                m_mul = ExponentialSmoothing(
+                    series, trend="mul", seasonal="mul",
+                    seasonal_periods=seasonal_period,
+                    initialization_method="estimated",
+                ).fit(optimized=True)
+            candidates.append(("mul/mul", m_mul, m_mul.aic))
+        except Exception:
+            pass
+
+    # Pick lowest AIC — fallback to simple if all failed
+    if not candidates:
+        converged = False
+        selected_type = "simple"
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            model = ExponentialSmoothing(
+                series, trend=None, seasonal=None,
+                initialization_method="estimated",
+            ).fit(optimized=True)
+    else:
+        candidates.sort(key=lambda x: x[2])
+        selected_type, model, _ = candidates[0]
+
+    # forecast_values ALWAYS assigned here — outside all if/else blocks
     forecast_values = model.forecast(periods)
 
     # Bootstrap confidence bands
-    # Resample from actual model residuals - no distributional assumption
     residuals = model.resid.dropna().values
     np.random.seed(42)
     simulations = np.array([
@@ -298,9 +381,7 @@ def run_forecast(series: pd.Series, periods: int = 4) -> dict:
     band_low  = np.percentile(simulations, 10, axis=0)
     band_high = np.percentile(simulations, 90, axis=0)
 
-    # Safety clip - prevent runaway forecasts on step-function or
-    # highly non-stationary data. Clips to +/-5 standard deviations
-    # from the historical mean. Universally accepted safety measure.
+    # Safety clip
     hist_mean = float(series.mean())
     hist_std  = float(series.std())
     clip_lo   = hist_mean - 5 * hist_std
@@ -310,13 +391,14 @@ def run_forecast(series: pd.Series, periods: int = 4) -> dict:
     band_low         = np.clip(band_low,  clip_lo, clip_hi)
     band_high        = np.clip(band_high, clip_lo, clip_hi)
 
-    # Model parameters for transparency panel
+    # Model parameters
     model_params = {
         "alpha":           round(float(model.params["smoothing_level"]), 3),
         "beta":            round(float(model.params.get("smoothing_trend", 0)), 3),
         "gamma":           round(float(model.params.get("smoothing_seasonal", 0)), 3),
         "seasonal_period": seasonal_period,
         "aic":             round(float(model.aic), 2),
+        "model_type":      selected_type,
         "converged":       converged,
     }
 

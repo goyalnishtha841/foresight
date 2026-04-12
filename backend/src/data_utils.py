@@ -54,7 +54,7 @@ def detect_columns(df: pd.DataFrame) -> dict:
     for col in df.columns:
         if df[col].dtype == object:
             try:
-                pd.to_datetime(df[col], infer_datetime_format=True)
+                pd.to_datetime(df[col])
                 date_col = col
                 break
             except Exception:
@@ -82,8 +82,13 @@ def prepare_series(df: pd.DataFrame,
         Time-indexed pd.Series sorted in ascending date order.
     """
     subset = df[[date_col, value_col]].copy()
-    subset[date_col] = pd.to_datetime(subset[date_col],
-                                      infer_datetime_format=True)
+    try:
+        subset[date_col] = pd.to_datetime(subset[date_col])
+    except ValueError:
+        # Fall back to coerce — converts unparseable values to NaT
+        subset[date_col] = pd.to_datetime(subset[date_col], errors='coerce')
+    # Normalise to date only — strips time/nanosecond components
+    subset[date_col] = subset[date_col].dt.normalize()
     subset = subset.sort_values(date_col).set_index(date_col)
     return subset[value_col].astype(float)
 
@@ -130,7 +135,8 @@ def quality_report(series: pd.Series) -> dict:
 
     date_start = str(series.index.min().date())
     date_end = str(series.index.max().date())
-
+    
+    
     # Build human-readable issue list
     issues = []
     if n_missing > 0:

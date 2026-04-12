@@ -15,9 +15,9 @@ import {
 } from '../utils/api.js'
 
 const DEMO_DATASETS = [
-  { label: 'Customer churn rate', file: '/data/churn_weekly.csv',        dateCol: 'week', valueCol: 'churn_rate_pct' },
-  { label: 'Branch transactions',  file: '/data/transactions_weekly.csv', dateCol: 'week', valueCol: 'transaction_volume' },
-  { label: 'Login success rate',   file: '/data/logins_weekly.csv',       dateCol: 'week', valueCol: 'login_success_rate_pct' },
+  { label: 'US retail sales',        file: '/data/example_retail_sales.csv',         dateCol: 'ds',    valueCol: 'y' },
+  { label: 'UK mortgage approvals',  file: '/data/uk_mortgage_approvals_monthly.csv', dateCol: 'month', valueCol: 'mortgage_approvals_thousands' },
+  { label: 'UK house prices',        file: '/data/uk_house_prices.csv',               dateCol: 'month', valueCol: 'avg_house_price_gbp_thousands' },
 ]
 
 export function useAnalysis() {
@@ -28,7 +28,7 @@ export function useAnalysis() {
   const [periods, setPeriods]         = useState(4)
   const [datasetLabel, setDatasetLabel] = useState('')
 
-  // Results state
+  // Results state 
   const [results, setResults]         = useState(null)
 
   // UI state
@@ -45,6 +45,8 @@ export function useAnalysis() {
   const [question, setQuestion]       = useState('')
   const [answer, setAnswer]           = useState(null)
   const [loadingAnswer, setLoadingAnswer] = useState(false)
+  const [valueCols, setValueCols] = useState([])
+  
 
   // ── Upload ────────────────────────────────────────────────────────────
 
@@ -57,6 +59,7 @@ export function useAnalysis() {
       setUploadInfo(info)
       setDateCol(info.date_col || info.columns[0])
       setValueCol(info.value_cols?.[0] || info.columns[1])
+      setValueCols(info.value_cols || [])
       setDatasetLabel(file.name.replace('.csv', '').replace(/_/g, ' '))
       setStep('configure')
     } catch (e) {
@@ -190,6 +193,46 @@ export function useAnalysis() {
     setQuestion('')
     setAnomalyExplanations({})
   }, [])
+  
+  const handleSwitchColumn = useCallback(async (newCol) => {
+  setValueCol(newCol)
+  setLoading(true)
+  setError(null)
+  setResults(null)
+  setAnomalyExplanations({})
+  setAnswer(null)
+
+  const steps = [
+    'Switching column…',
+    'Running ETS forecast…',
+    'Detecting anomalies…',
+    'Backtesting accuracy…',
+    'Generating AI summary…',
+  ]
+  let i = 0
+  setLoadingMsg(steps[i])
+  const interval = setInterval(() => {
+    i = Math.min(i + 1, steps.length - 1)
+    setLoadingMsg(steps[i])
+  }, 1200)
+
+  try {
+    const data = await runAnalysis({
+      date_col: dateCol,
+      value_col: newCol,        // ← use newCol directly, not valueCol state
+      periods,
+      dataset_label: datasetLabel,
+    })
+    setResults(data)
+    setStep('dashboard')
+  } catch (e) {
+    setError(e?.response?.data?.detail || 'Analysis failed.')
+  } finally {
+    clearInterval(interval)
+    setLoading(false)
+  }
+}, [dateCol, periods, datasetLabel])
+
 
   return {
     // State
@@ -199,12 +242,14 @@ export function useAnalysis() {
     periods, setPeriods,
     datasetLabel, setDatasetLabel,
     results,
+    valueCols,
     anomalyExplanations, loadingAnomalyIdx,
     question, setQuestion, answer, loadingAnswer,
     // Actions
     handleUpload, handleLoadDemo, handleAnalyse,
     handleExplainAnomaly, handleCustomScenario,
     handleAsk, handleReset,
+    handleSwitchColumn,
     // Constants
     DEMO_DATASETS,
   }

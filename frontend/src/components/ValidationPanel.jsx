@@ -165,25 +165,7 @@ export default function ValidationPanel({ validation, modelParams }) {
             </tbody>
           </table>
         </div>
-        {/* {validation.winner !== 'ets' && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200
-                        rounded-lg px-3 py-2 mt-2">
-            The naive baseline outperforms ETS on this dataset.
-            The forecast is shown for direction only — treat exact values with caution.
-          </p>
-        )} */}
-        {/* {validation.winner !== 'ets' && (
-  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200
-                rounded-lg px-3 py-2 mt-2">
-    {Math.abs(validation.ets_mape - validation.naive_mape) < 1.0
-      ? `ETS and the naive baseline performed similarly on this dataset
-         (${validation.ets_mape}% vs ${validation.naive_mape}% MAPE).
-         Forecast direction is reliable — treat exact values as indicative.`
-      : `The naive baseline outperforms ETS on this dataset.
-         The forecast is shown for direction only — treat exact values with caution.`
-    }
-  </p>
-)} */}
+      
         {validation.winner !== 'ets' && (
     <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200
                   rounded-lg px-3 py-2 mt-2">
@@ -225,6 +207,7 @@ export default function ValidationPanel({ validation, modelParams }) {
                 { label: 'Gamma (seasonal)', value: modelParams.gamma,           tip: 'How fast seasonality adapts' },
                 { label: 'Seasonal period', value: modelParams.seasonal_period,  tip: 'Detected cycle length in periods' },
                 { label: 'AIC',             value: fmtNumber(modelParams.aic),   tip: 'Model fit quality — lower is better' },
+                { label: 'Model variant', value: modelParams.model_type || 'add/add', tip: 'ETS variant auto-selected by AIC' },
               ].map(p => (
                 <div key={p.label} className="bg-gray-50 rounded-lg px-3 py-2">
                   <p className="text-xs text-gray-400">{p.label}</p>

@@ -23,6 +23,7 @@ import ScenarioPanel      from './ScenarioPanel.jsx'
 import DecompositionPanel from './DecompositionPanel.jsx'
 import AskPanel           from './AskPanel.jsx'
 import HealthDial         from './HealthDial.jsx'
+import ExportButton from './ExportButton.jsx'
 
 export default function Dashboard({
   results,
@@ -31,6 +32,9 @@ export default function Dashboard({
   loadingAnomalyIdx,
   onExplainAnomaly,
   onCustomScenario,
+  valueCols,
+  valueCol,
+  onSwitchColumn,
   question, setQuestion, onAsk, answer, loadingAnswer,
   onReset,
 }) {
@@ -61,6 +65,24 @@ export default function Dashboard({
               <p className="text-sm font-semibold text-gray-900 truncate">ForeSight</p>
               <p className="text-xs text-gray-400 truncate">{datasetLabel}</p>
             </div>
+          {/* Column switcher */}
+        {valueCols && valueCols.length > 1 && valueCol && (
+          <div className="flex items-center gap-1.5 ml-2">
+            <span className="text-xs text-gray-400">Forecasting:</span>
+            <select
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1
+                        bg-white text-gray-700 font-medium cursor-pointer
+                        hover:border-nw-300 focus:outline-none focus:border-nw-400
+                        transition-colors"
+              value={valueCol || ''}
+              onChange={(e) => onSwitchColumn(e.target.value)}
+            >
+              {valueCols.map(col => (
+                <option key={col} value={col}>{col}</option>
+              ))}
+            </select>
+          </div>
+        )}
           </div>
 
           {/* Health score compact */}
@@ -72,7 +94,7 @@ export default function Dashboard({
               />
             </div>
           )}
-
+          <ExportButton datasetLabel={datasetLabel} results={results} />
           {/* Reset */}
           <button onClick={onReset} className="btn-ghost flex items-center gap-1.5 text-sm">
             <svg className="w-4 h-4" fill="none" stroke="currentColor"
@@ -86,7 +108,7 @@ export default function Dashboard({
       </header>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+      <main id="dashboard-content" className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-4">
 
         {/* Quality banner */}
         {quality && <QualityBanner quality={quality} />}
@@ -114,13 +136,14 @@ export default function Dashboard({
           {/* Left column */}
           <div className="space-y-4">
             {anomalies && (
-              <AnomalyPanel
-                anomalies={anomalies}
-                explanations={anomalyExplanations}
-                loadingIdx={loadingAnomalyIdx}
-                onExplain={onExplainAnomaly}
-              />
-            )}
+    <AnomalyPanel
+      anomalies={anomalies}
+      anomalyRisk={results.anomaly_risk}
+      explanations={anomalyExplanations}
+      loadingIdx={loadingAnomalyIdx}
+      onExplain={onExplainAnomaly}
+    />
+  )}
             {scenarios && (
               <ScenarioPanel
                 scenarios={scenarios}
