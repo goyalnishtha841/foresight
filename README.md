@@ -148,7 +148,7 @@ npm run preview
 
 **Runtime**
 
-Python 3.11 (pinned in runtime.txt for Render deployment).
+Python 3.11.9 (pinned in runtime.txt for Render deployment).
 
 ---
 
