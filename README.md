@@ -103,17 +103,16 @@ Open http://localhost:5173 in your browser.
 
 **4. Run the test suite (optional)**
 
+The test suite does not require a real Groq API key — all LLM calls are mocked. 
+Set the environment variable to any value before running:
+
 ```bash
 cd backend
+export GROQ_API_KEY=test
 pytest tests/ -v
 ```
 
-The test suite does not require a real Groq API key. 
-All LLM calls are mocked. However the GROQ_API_KEY 
-environment variable must be set to any value:
-
-export GROQ_API_KEY=test
-pytest tests/ -v
+All 31 tests should pass.
 
 **5. Production build (optional)**
 
