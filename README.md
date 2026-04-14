@@ -108,6 +108,13 @@ cd backend
 pytest tests/ -v
 ```
 
+The test suite does not require a real Groq API key. 
+All LLM calls are mocked. However the GROQ_API_KEY 
+environment variable must be set to any value:
+
+export GROQ_API_KEY=test
+pytest tests/ -v
+
 **5. Production build (optional)**
 
 ```bash
