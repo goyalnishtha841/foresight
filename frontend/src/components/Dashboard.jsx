@@ -10,6 +10,7 @@ import DecompositionPanel from './DecompositionPanel.jsx'
 import AskPanel           from './AskPanel.jsx'
 import HealthDial         from './HealthDial.jsx'
 import ExportButton       from './ExportButton.jsx'
+import ThresholdPanel    from './ThresholdPanel.jsx'
 
 function ScrollReveal({ children, delay = 0 }) {
   return (
@@ -103,11 +104,21 @@ export default function Dashboard({
         )}
 
         {forecast && (
-          <ScrollReveal delay={0.1}>
-            <ForecastChart forecast={forecast} anomalies={anomalies || []} validationWinner={validation?.winner} />
+                  <ScrollReveal delay={0.1}>
+                    <ForecastChart
+                      forecast={forecast}
+                      anomalies={anomalies || []}
+                      validationWinner={validation?.winner}
+                      threshold={results?.threshold}
+                    />
+                  </ScrollReveal>
+                )}
+
+        {results?.threshold?.any_breach && (
+          <ScrollReveal delay={0.12}>
+            <ThresholdPanel threshold={results.threshold} />
           </ScrollReveal>
         )}
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-6">
             {anomalies && (

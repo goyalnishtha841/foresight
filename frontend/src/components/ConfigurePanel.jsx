@@ -8,6 +8,8 @@ export default function ConfigurePanel({
   datasetLabel, setDatasetLabel,
   onAnalyse, onBack, loading, error,
   theme, onToggleTheme,
+  threshold, setThreshold,
+  thresholdDir, setThresholdDir,
 }) {
   const { columns = [], value_cols = [], rows } = uploadInfo || {}
 
@@ -104,7 +106,38 @@ export default function ConfigurePanel({
                 <span>1</span><span>4</span><span>8</span>
               </div>
             </div>
-
+              {/* Threshold Alert — optional */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Threshold alert
+                <span className="ml-1.5 text-xs text-muted-foreground font-normal">optional</span>
+              </label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Get warned if the forecast breaches a critical level
+              </p>
+              <div className="flex gap-2">
+                <select
+                  value={thresholdDir}
+                  onChange={e => setThresholdDir(e.target.value)}
+                  className="input-dark bg-secondary/20 w-36 flex-shrink-0"
+                >
+                  <option value="below">Falls below</option>
+                  <option value="above">Rises above</option>
+                </select>
+                <input
+                  type="number"
+                  value={threshold}
+                  onChange={e => setThreshold(e.target.value)}
+                  placeholder="e.g. 40"
+                  className="input-dark flex-1"
+                />
+              </div>
+              {threshold && (
+                <p className="text-xs text-primary font-medium mt-1.5">
+                  ✓ Will alert if forecast {thresholdDir === 'below' ? 'falls below' : 'rises above'} {threshold}
+                </p>
+              )}
+            </div>
             {/* Error */}
             {error && (
               <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">

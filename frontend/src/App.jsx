@@ -49,26 +49,29 @@ export default function App() {
           onToggleTheme={toggleTheme}
         />
       )}
-
-      {analysis.step === 'configure' && (
-        <ConfigurePanel
-          uploadInfo={analysis.uploadInfo}
-          dateCol={analysis.dateCol}
-          setDateCol={analysis.setDateCol}
-          valueCol={analysis.valueCol}
-          setValueCol={analysis.setValueCol}
-          periods={analysis.periods}
-          setPeriods={analysis.setPeriods}
-          datasetLabel={analysis.datasetLabel}
-          setDatasetLabel={analysis.setDatasetLabel}
-          onAnalyse={analysis.handleAnalyse}
-          onBack={analysis.handleReset}
-          loading={analysis.loading}
-          error={analysis.error}
-          theme={theme}
-          onToggleTheme={toggleTheme}
-        />
-      )}
+        {analysis.step === 'configure' && (
+                <ConfigurePanel
+                  uploadInfo={analysis.uploadInfo}
+                  dateCol={analysis.dateCol}
+                  setDateCol={analysis.setDateCol}
+                  valueCol={analysis.valueCol}
+                  setValueCol={analysis.setValueCol}
+                  periods={analysis.periods}
+                  setPeriods={analysis.setPeriods}
+                  datasetLabel={analysis.datasetLabel}
+                  setDatasetLabel={analysis.setDatasetLabel}
+                  onAnalyse={analysis.handleAnalyse}
+                  onBack={analysis.handleReset}
+                  loading={analysis.loading}
+                  error={analysis.error}
+                  theme={theme}
+                  onToggleTheme={toggleTheme}
+                  threshold={analysis.threshold}
+                  setThreshold={analysis.setThreshold}
+                  thresholdDir={analysis.thresholdDir}
+                  setThresholdDir={analysis.setThresholdDir}
+                />
+              )}
 
       {analysis.step === 'dashboard' && analysis.results && (
         <Dashboard

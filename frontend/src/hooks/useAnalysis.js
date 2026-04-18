@@ -67,7 +67,8 @@ export function useAnalysis() {
   const [answer, setAnswer]           = useState(null)
   const [loadingAnswer, setLoadingAnswer] = useState(false)
   const [valueCols, setValueCols] = useState([])
-  
+  const [threshold, setThreshold]       = useState('')
+  const [thresholdDir, setThresholdDir] = useState('below')
 
   // ── Upload ────────────────────────────────────────────────────────────
 
@@ -168,12 +169,14 @@ export function useAnalysis() {
     }, 1200)
 
     try {
-      const data = await runAnalysis({
-        date_col: dateCol,
-        value_col: valueCol,
-        periods,
-        dataset_label: datasetLabel,
-      })
+        const data = await runAnalysis({
+    date_col:      dateCol,
+    value_col:     valueCol,
+    periods,
+    dataset_label: datasetLabel,
+    threshold:     threshold ? parseFloat(threshold) : null,
+    threshold_dir: thresholdDir,
+  })
       setResults(data)
       setStep('dashboard')
     } catch (e) {
@@ -182,7 +185,7 @@ export function useAnalysis() {
       clearInterval(interval)
       setLoading(false)
     }
-  }, [dateCol, valueCol, periods, datasetLabel])
+  }, [dateCol, valueCol, periods, datasetLabel, threshold, thresholdDir])
 
   // ── Anomaly explanation ───────────────────────────────────────────────
 
@@ -301,6 +304,7 @@ export function useAnalysis() {
     handleExplainAnomaly, handleCustomScenario,
     handleAsk, handleReset,
     handleSwitchColumn,
+    threshold,setThreshold,thresholdDir,setThresholdDir,
     // Constants
     DEMO_DATASETS,
   }

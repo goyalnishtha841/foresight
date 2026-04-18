@@ -116,7 +116,7 @@ function ChartSkeleton() {
   )
 }
 
-export default function ForecastChart({ forecast, anomalies, validationWinner }) {
+export default function ForecastChart({ forecast, anomalies, validationWinner,threshold }) {
   const [phase, setPhase] = useState('skeleton') // skeleton → chart
 
   useEffect(() => {
@@ -253,6 +253,22 @@ export default function ForecastChart({ forecast, anomalies, validationWinner })
                       stroke="hsl(var(--border))" strokeDasharray="4 4" strokeOpacity={0.5}
                     />
                   )}
+                  {/* Threshold line */}
+                  {threshold?.threshold != null && (
+                    <ReferenceLine
+                      y={threshold.threshold}
+                      stroke={threshold.any_breach ? 'hsl(4,72%,58%)' : 'hsl(38,88%,58%)'}
+                      strokeDasharray="6 3"
+                      strokeWidth={2}
+                      label={{
+                        value: `${threshold.direction === 'below' ? '▼' : '▲'} Threshold: ${fmtNumber(threshold.threshold)}`,
+                        position: 'insideTopRight',
+                        fontSize: 10,
+                        fontWeight: 600,
+                        fill: threshold.any_breach ? 'hsl(4,72%,58%)' : 'hsl(38,88%,58%)',
+                      }}
+                    />
+                  )}
                 </ComposedChart>
               </ResponsiveContainer>
             </motion.div>
@@ -278,7 +294,19 @@ export default function ForecastChart({ forecast, anomalies, validationWinner })
           <div className="w-6 border-t-2 border-dashed border-primary/60" />
           <span>Forecast</span>
         </div>
-      </div>
-    </motion.div>
-  )
-}
+
+          {/* Threshold legend item — only shows when threshold is set */}
+          {threshold?.threshold != null && (
+            <div className="flex items-center gap-2">
+              <div className="w-6 border-t-2 border-dashed"
+                  style={{ borderColor: threshold.any_breach ? 'hsl(4,72%,58%)' : 'hsl(38,88%,58%)' }} />
+              <span style={{ color: threshold.any_breach ? 'hsl(4,72%,58%)' : 'hsl(38,88%,58%)' }}>
+                Threshold {threshold.any_breach ? '⚠ Breach risk' : '✓ Safe'}
+              </span>
+            </div>
+          )}
+
+        </div>
+      </motion.div>
+    )
+  }

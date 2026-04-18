@@ -31,9 +31,17 @@ export async function uploadFile(file) {
  * Run full analysis pipeline.
  * @param {object} params - { date_col, value_col, periods, dataset_label }
  */
-export async function runAnalysis(params) {
-  const { data } = await client.post('/analyse', params)
-  return data
+export async function runAnalysis({ date_col, value_col, periods,
+                                    dataset_label, threshold, threshold_dir }) {
+  const response = await client.post('/analyse', {
+    date_col,
+    value_col,
+    periods,
+    dataset_label,
+    threshold:      threshold || null,
+    threshold_dir:  threshold_dir || 'below',
+  })
+  return response.data
 }
 
 /**

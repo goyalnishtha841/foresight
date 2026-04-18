@@ -61,6 +61,63 @@ def _sanitise(obj):
         return [_sanitise(v) for v in obj]
     return obj
 
+def _check_threshold(fc_values, band_low, band_high, dates,
+                     threshold, direction, hist_mean, hist_std):
+    """
+    Check whether forecast periods breach a user-defined threshold.
+    Returns breach details with probability estimates based on band width.
+    """
+    breaches = []
+    for i, (fc, lo, hi, dt) in enumerate(zip(fc_values, band_low, band_high, dates)):
+        band_width = hi - lo
+        if band_width <= 0:
+            continue
+
+        if direction == "below" and lo < threshold:
+            # What fraction of the band is below the threshold?
+            below = max(0, min(band_width, threshold - lo))
+            prob  = round(below / band_width * 100)
+            if prob > 5:  # only report meaningful probabilities
+                breaches.append({
+                    "period":      i + 1,
+                    "date":        dt,
+                    "probability": prob,
+                    "forecast":    round(fc, 2),
+                    "threshold":   threshold,
+                    "direction":   "below",
+                    "severity":    "high" if prob >= 70 else "medium" if prob >= 40 else "low",
+                })
+
+        elif direction == "above" and hi > threshold:
+            above = max(0, min(band_width, hi - threshold))
+            prob  = round(above / band_width * 100)
+            if prob > 5:
+                breaches.append({
+                    "period":      i + 1,
+                    "date":        dt,
+                    "probability": prob,
+                    "forecast":    round(fc, 2),
+                    "threshold":   threshold,
+                    "direction":   "above",
+                    "severity":    "high" if prob >= 70 else "medium" if prob >= 40 else "low",
+                })
+
+    # Summary
+    max_prob = max((b["probability"] for b in breaches), default=0)
+    return {
+        "threshold":    threshold,
+        "direction":    direction,
+        "breaches":     breaches,
+        "any_breach":   len(breaches) > 0,
+        "max_probability": max_prob,
+        "summary": (
+            f"No periods are forecast to go {direction} {threshold}."
+            if not breaches else
+            f"{len(breaches)} of {len(fc_values)} forecast periods "
+            f"have a risk of going {direction} {threshold}. "
+            f"Highest probability: {max_prob}% in period {breaches[0]['period']}."
+        ),
+    }
 
 app = FastAPI(
     title="ForeSight API",
@@ -90,6 +147,8 @@ class AnalyseRequest(BaseModel):
     value_col:     str
     periods:       int = 4
     dataset_label: str = "your data"
+    threshold:     float | None = None
+    threshold_dir: str = "below"   # "below" or "above"
 
 
 class QuestionRequest(BaseModel):
@@ -155,6 +214,18 @@ async def analyse(req: AnalyseRequest):
     validation   = run_validation(series, holdout=req.periods)
     scenarios    = run_scenarios(series, req.periods)
 
+    threshold_result = None
+    if req.threshold is not None:
+        threshold_result = _check_threshold(
+            fc_values  = forecast["forecast"],
+            band_low   = forecast["band_low"],
+            band_high  = forecast["band_high"],
+            dates      = forecast["dates"],
+            threshold  = req.threshold,
+            direction  = req.threshold_dir,
+            hist_mean  = float(series.mean()),
+            hist_std   = float(series.std()),
+        )
     narration    = narrate_forecast(forecast, validation, req.dataset_label)
     key_findings = narrate_key_findings(forecast, anomalies, validation)
 
@@ -168,6 +239,7 @@ async def analyse(req: AnalyseRequest):
     _session["quality"]      = quality
     _session["narration"]    = narration
     _session["key_findings"] = key_findings
+    _session["threshold"] = threshold_result
 
     return _sanitise({
         "quality":      quality,
@@ -178,6 +250,7 @@ async def analyse(req: AnalyseRequest):
         "scenarios":    scenarios,
         "narration":    narration,
         "key_findings": key_findings,
+        "threshold": threshold_result,
     })
 
 

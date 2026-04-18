@@ -78,16 +78,19 @@ def narrate_forecast(forecast: dict,
         "beats_naive_baseline": validation.get("winner") == "ets",
         "uncertainty_level": uncertainty_text,
     }
-    prompt = f"""You are a concise data analyst briefing a non-technical \
-business user at a bank.
-
-Data context: {json.dumps(context)}
-
-Write exactly 3 sentences. No bullet points, no markdown, no jargon.
-Sentence 1: The central forecast direction and approximate magnitude.
-Sentence 2: The uncertainty range and what it means practically.
-Sentence 3: The single most important thing to watch or act on.
-Maximum 90 words total."""
+    prompt = f"""You are a senior financial analyst at NatWest Group \
+    briefing a risk manager or treasury analyst.
+    Data context: {json.dumps(context)}
+    Write exactly 3 sentences. No bullet points, no markdown.
+    Use banking terminology where natural (e.g. loan book, net lending, \
+    impairment risk, Basel requirements, BoE base rate impact).
+    Sentence 1: The central forecast direction and magnitude — be specific \
+    about the numbers and what they mean for the business.
+    Sentence 2: The uncertainty range — frame it in terms of planning \
+    implications for a bank (provisioning, capital allocation, staffing).
+    Sentence 3: The single most important risk or opportunity a NatWest \
+    analyst should act on this week.
+    Maximum 90 words total."""
 
     summary = _call_groq(prompt, max_tokens=180)
     return {"summary": summary, "disclaimer": DISCLAIMER}
@@ -95,17 +98,19 @@ Maximum 90 words total."""
 
 def narrate_anomaly(anomaly: dict, context: dict) -> str:
     """Generate a 3-sentence plain-English anomaly explanation."""
-    prompt = f"""You are a concise data analyst explaining an unusual \
-data point to a non-technical business user.
-
-Anomaly: {json.dumps(anomaly)}
-Context: {json.dumps(context)}
-
-Write exactly 3 sentences. No bullet points, no markdown, no jargon.
-Sentence 1: What happened — the date, the value, how unusual it was.
-Sentence 2: A likely business reason based on the data pattern shown.
-Sentence 3: The recommended next step for the user.
-Maximum 80 words total."""
+    prompt = f"""You are a senior risk analyst at NatWest Group \
+    explaining an unusual data point to a colleague.
+    Anomaly: {json.dumps(anomaly)}
+    Context: {json.dumps(context)}
+    Write exactly 3 sentences. No bullet points, no markdown.
+    Sentence 1: What happened — the date, the value, how statistically \
+    unusual it was (mention the z-score in plain English).
+    Sentence 2: The most likely banking or macroeconomic cause — reference \
+    real events where plausible (COVID lockdowns, BoE rate changes, \
+    regulatory shifts, seasonal banking patterns).
+    Sentence 3: What a NatWest risk manager should do — check related \
+    metrics, escalate, update provisions, or monitor for recurrence.
+    Maximum 80 words total."""
 
     return _call_groq(prompt, max_tokens=160)
 
@@ -124,20 +129,21 @@ def narrate_key_findings(forecast: dict,
         "anomaly_count": len(anomalies),
         "top_anomaly": anomalies[0] if anomalies else "none",
     }
-    prompt = f"""You are a senior data analyst writing a Monday morning \
-briefing for a bank manager.
-
-Data context: {json.dumps(context)}
-
-Write exactly 3 findings. Each is one plain-English sentence.
-Finding 1: The most important trend in the forecast period.
-Finding 2: The most significant anomaly, or "No anomalies detected" \
-if there are none.
-Finding 3: The single most important action or watch point.
-
-Return only the 3 sentences separated by the pipe character |.
-No labels, no bullets, no markdown, no line breaks."""
-
+    prompt = f"""You are a senior NatWest financial analyst writing the \
+    Monday morning risk briefing for the Head of Retail Banking.
+    Data context: {json.dumps(context)}
+    Write exactly 3 findings. Each is one plain-English sentence.
+    Use banking language naturally — reference impairment risk, capital \
+    buffers, BoE policy, consumer credit trends, or mortgage market \
+    conditions where relevant to the data.
+    Finding 1: The most important forecast trend and its business implication \
+    for NatWest — be specific about numbers and direction.
+    Finding 2: The anomaly story — what happened, likely cause in banking \
+    context, and whether it is a one-off or systemic signal.
+    Finding 3: The single most important action for a risk manager or \
+    treasury analyst to take this week based on this data.
+    Return only the 3 sentences separated by the pipe character |.
+    No labels, no bullets, no markdown, no line breaks."""
     raw = _call_groq(prompt, max_tokens=220)
     parts = [p.strip() for p in raw.split("|")]
     while len(parts) < 3:
@@ -162,15 +168,17 @@ def answer_question(question: str,
         "anomaly_count": len(anomalies),
         "top_anomalies": anomalies[:2],
     }
-    prompt = f"""You are a helpful data analyst assistant. A user is \
-viewing a forecast dashboard for "{dataset_label}" and has asked:
-
-"{question}"
-
-Available data: {json.dumps(context)}
-
-Answer in 2-3 plain-English sentences. Be specific to the numbers above.
-If you cannot answer from the available data, say so honestly.
-No bullet points, no markdown."""
+    prompt = f"""You are a senior NatWest financial analyst assistant. \
+    A colleague is viewing a forecast dashboard for "{dataset_label}" \
+    and has asked: "{question}"
+    Available data: {json.dumps(context)}
+    Answer in 2-3 sentences. Be specific to the numbers — quote actual \
+    forecast values, dates, and percentages from the data above.
+    Use banking context naturally: reference what the numbers mean for \
+    provisioning, risk appetite, regulatory capital, or business planning \
+    where relevant.
+    If the question cannot be answered from the available data, say so \
+    honestly and suggest what additional data would help.
+    No bullet points, no markdown."""
 
     return _call_groq(prompt, max_tokens=200)
