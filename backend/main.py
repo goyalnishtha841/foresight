@@ -160,6 +160,10 @@ class CustomScenarioRequest(BaseModel):
     growth_pct: float
     periods:    int = 4
 
+class PortfolioScanRequest(BaseModel):
+    date_col:   str
+    value_cols: list[str]
+
 
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
@@ -304,7 +308,79 @@ async def ask(req: QuestionRequest):
     )
     return {"question": req.question, "answer": answer}
 
+@app.post("/portfolio-scan", summary="Scan all columns for portfolio health overview")
+async def portfolio_scan(req: PortfolioScanRequest):
+    """
+    Scan all numeric columns simultaneously and return health scores,
+    anomaly counts, risk levels and trend directions for each.
+    Sorted worst first so attention-needed metrics appear at the top.
+    """
+    if "df" not in _session:
+        raise HTTPException(400, "No file uploaded. Call /upload first.")
 
+    df         = _session["df"]
+    date_col   = req.date_col
+    value_cols = req.value_cols
+
+    if not date_col or not value_cols:
+        raise HTTPException(400, "date_col and value_cols are required.")
+
+    results = []
+
+    for col in value_cols:
+        try:
+            raw = prepare_series(df, date_col, col)
+            q   = quality_report(raw)
+            s   = q.pop("series_clean")
+
+            vl  = run_validation(s)
+            an  = detect_anomalies(s) or []
+            rk  = compute_anomaly_risk(s)
+            fc  = run_forecast(s, 4)
+
+            vals = fc["historical_values"]
+            if len(vals) >= 4:
+                trend = "up" if vals[-1] > vals[-4] else "down" if vals[-1] < vals[-4] else "flat"
+            else:
+                trend = "flat"
+
+            results.append({
+                "column":        col,
+                "health_score":  vl.get("health_score", 0),
+                "health_label":  vl.get("health_label", "red"),
+                "ets_mape":      round(vl.get("ets_mape", 0), 2),
+                "winner":        vl.get("winner", "unknown"),
+                "anomaly_count": len(an),
+                "risk_level":    rk.get("risk_level", "unknown"),
+                "trend":         trend,
+                "last_value":    round(float(vals[-1]), 2) if vals else 0,
+                "forecast_next": fc["forecast"][0] if fc.get("forecast") else 0,
+                "n_rows":        len(s),
+            })
+        except Exception:
+            results.append({
+                "column":        col,
+                "health_score":  0,
+                "health_label":  "red",
+                "ets_mape":      0,
+                "winner":        "unknown",
+                "anomaly_count": 0,
+                "risk_level":    "unknown",
+                "trend":         "flat",
+                "last_value":    0,
+                "forecast_next": 0,
+                "n_rows":        0,
+            })
+
+    results.sort(key=lambda x: x["health_score"])
+    need_attention = sum(1 for r in results if r["health_label"] != "green")
+
+    return _sanitise({
+        "columns":        results,
+        "total":          len(results),
+        "need_attention": need_attention,
+        "date_col":       date_col,
+    })
 @app.post("/export/pdf", summary="Generate PDF briefing")
 async def export_pdf():
     """Generate a clean PDF briefing from the current analysis."""

@@ -60,14 +60,32 @@ export default function Dashboard({
             {valueCols && valueCols.length > 1 && (
               <div className="hidden md:flex items-center gap-2 ml-4 border-l pl-4 border-border/20">
                 <span className="text-[10px] text-muted-foreground font-bold uppercase">Metric:</span>
-                <select
-                  className="text-xs border border-border/30 rounded-lg px-2 py-1 bg-secondary/20 text-foreground font-medium cursor-pointer
-                             hover:border-primary/30 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
-                  value={valueCol || ''}
-                  onChange={(e) => onSwitchColumn(e.target.value)}
+            <select
+              className="text-xs border border-border/30 rounded-lg px-2 py-1
+                        bg-background text-foreground font-medium cursor-pointer
+                        hover:border-primary/30 focus:ring-1 focus:ring-primary/20
+                        outline-none transition-all"
+              style={{
+                backgroundColor: 'hsl(var(--background))',
+                color: 'hsl(var(--foreground))',
+                borderColor: 'hsl(var(--border) / 0.3)',
+              }}
+              value={valueCol || ''}
+              onChange={(e) => onSwitchColumn(e.target.value)}
+            >
+              {valueCols.map(col => (
+                <option
+                  key={col}
+                  value={col}
+                  style={{
+                    backgroundColor: 'hsl(var(--background))',
+                    color: 'hsl(var(--foreground))',
+                  }}
                 >
-                  {valueCols.map(col => <option key={col} value={col}>{col}</option>)}
-                </select>
+                  {col.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
               </div>
             )}
           </div>

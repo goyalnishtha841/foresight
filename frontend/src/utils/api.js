@@ -11,7 +11,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const client = axios.create({
   baseURL: BASE_URL,
-  timeout: 60000, // 60s — Claude API calls can take a few seconds
+  timeout: 60000, // 60s — Groq API calls can take a few seconds
 })
 
 /**
@@ -29,23 +29,28 @@ export async function uploadFile(file) {
 
 /**
  * Run full analysis pipeline.
- * @param {object} params - { date_col, value_col, periods, dataset_label }
+ * @param {object} params - { date_col, value_col, periods, dataset_label, threshold, threshold_dir }
  */
-export async function runAnalysis({ date_col, value_col, periods,
-                                    dataset_label, threshold, threshold_dir }) {
-  const response = await client.post('/analyse', {
-    date_col,
-    value_col,
-    periods,
-    dataset_label,
-    threshold:      threshold || null,
-    threshold_dir:  threshold_dir || 'below',
-  })
-  return response.data
+export async function runAnalysis(params) {
+  const { data } = await client.post('/analyse', params)
+  return data
 }
 
 /**
- * Get Claude explanation for a specific anomaly by index.
+ * Run portfolio scan — analyses all columns simultaneously.
+ * @param {string} dateCol
+ * @param {string[]} valueCols
+ */
+export async function runPortfolioScan(dateCol, valueCols) {
+  const { data } = await client.post('/portfolio-scan', {
+    date_col:   dateCol,
+    value_cols: valueCols,
+  })
+  return data
+}
+
+/**
+ * Get explanation for a specific anomaly by index.
  * @param {number} index
  */
 export async function explainAnomaly(index) {
@@ -84,6 +89,7 @@ export async function checkHealth() {
   const { data } = await client.get('/health')
   return data
 }
+
 export async function exportPdf() {
   const response = await fetch(`${BASE_URL}/export/pdf`, { method: 'POST' })
   const blob = await response.blob()
