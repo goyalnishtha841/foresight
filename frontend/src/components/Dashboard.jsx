@@ -11,6 +11,7 @@ import AskPanel           from './AskPanel.jsx'
 import HealthDial         from './HealthDial.jsx'
 import ExportButton       from './ExportButton.jsx'
 import ThresholdPanel    from './ThresholdPanel.jsx'
+import YoYPanel from './YoYPanel.jsx'
 
 function ScrollReveal({ children, delay = 0 }) {
   return (
@@ -142,6 +143,11 @@ export default function Dashboard({
             {validation && (
               <ScrollReveal delay={0.15}>
                 <ValidationPanel validation={validation} modelParams={forecast?.model_params} />
+              </ScrollReveal>
+            )}
+            {forecast && (
+              <ScrollReveal delay={0.18}>
+                <YoYPanel forecast={forecast} />
               </ScrollReveal>
             )}
           </div>
