@@ -232,12 +232,12 @@ Click Export in the top header to download a formatted PDF briefing containing t
 ```
 Browser (React + Vite)
   UploadPanel
-  PortfolioPanel        ← new: auto health scan for multi-column files
-  ConfigurePanel        ← new: threshold alert configuration
+  PortfolioPanel        
+  ConfigurePanel        
   Dashboard
-    ForecastChart       ← new: threshold reference line
-    ThresholdPanel      ← new: breach probability cards
-    YoYPanel            ← new: year-on-year comparison
+    ForecastChart      
+    ThresholdPanel      
+    YoYPanel            
     AnomalyPanel
     DecompositionPanel
     ValidationPanel
@@ -416,9 +416,9 @@ foresight/
         HealthDial.jsx
         LoadingOverlay.jsx
         ExportButton.jsx
-        ThresholdPanel.jsx  ← new: breach probability cards
-        YoYPanel.jsx        ← new: year-on-year comparison
-        PortfolioPanel.jsx  ← new: portfolio health scan grid
+        ThresholdPanel.jsx 
+        YoYPanel.jsx       
+        PortfolioPanel.jsx  
       hooks/
         useAnalysis.js    Central state management; all API orchestration
       utils/
